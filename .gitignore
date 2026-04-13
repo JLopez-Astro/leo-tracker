@@ -1,0 +1,22 @@
+# Virtual environment - machine-specific: do not need to commit
+venv/
+.venv/
+
+# API credentials. Do not Commit.
+.env
+
+# Python cache files - auto-generated, not source code.
+__pycache__/
+*.pyc
+*.pyo
+
+# Data cache - raw downloaded data, do not need to commit.
+data/raw/
+data/processed/
+
+# macOS junk
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
