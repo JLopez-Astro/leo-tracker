@@ -4,13 +4,12 @@
 # -e: exit immediately if command fails
 # -u: treat unset variables as an error
 # -o pipefail: if any command in a pipe fails, whole pipe fails
-set -eou pipefail
+set -euo pipefail
 
 # Resolve Paths ----------
-# BASH_SOURCE[0] is path to THIS script.
-# dirname returns directory. Go one level up to get project root.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." $$ pwd)"
+# When sourcing from the project root, can rely on pwd directly.
+# Use pwd -P to resolve any symlinks and get real physical path.
+PROJECT_ROOT="$(pwd)"
 
 echo "Setting up leo-tracker in: $PROJECT_ROOT"
 
