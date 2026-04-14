@@ -33,7 +33,7 @@ echo "Virtual environment activated: $VIRTUAL_ENV"
 # Dependencies ----------
 echo "Installing dependencies from requirements.txt..."
 pip install --upgrade pip --quiet
-pip install -r "$PROJECT_ROOT/requirements.txt"
+pip install -r "$PROJECT_ROOT/requirements.txt" --quiet
 
 # Environment Variables ----------
 # Load variables from the .env file and export them into the shell environment.
