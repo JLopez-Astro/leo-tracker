@@ -49,7 +49,7 @@ TLE_QUERY_URL = (
     f"/format/json"
 )
 
-def create_session() -> requests.Session:
+def create_session():
     """
     Create and return an authenticated requests.Session.
 
@@ -98,7 +98,7 @@ def create_session() -> requests.Session:
     logger.info("Authentication successful.")
     return session
 
-def fetch_tle_dataframe(session: requests.Session) -> pd.DataFrame:
+def fetch_tle_dataframe(session):
     """
     Fetch TLE data for LEO objects and return as a Pandas DataFrame.
 
@@ -159,9 +159,16 @@ def fetch_tle_dataframe(session: requests.Session) -> pd.DataFrame:
     logger.info(f"DataFrame built: {df.shape[0]} rows x {df.shape[1]} columns")
     return df
 
-def close_session(session: requests.Session) -> None:
+def close_session(session):
     """
     Close the authenticated session. Logs out of Space-Track.
+
+    Args:
+        session: An authenticated requests.Session from create_session().
+
+    Returns:
+        None.
+
     """
     session.close()
     logger.info("Session closed.")

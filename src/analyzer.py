@@ -26,7 +26,7 @@ EARTH_RADIUS_KM = 6371.0
 
 # 1. TLE AGE ANALYSIS ----------
 
-def compute_tle_age(df: pd.DataFrame) -> pd.DataFrame:
+def compute_tle_age(df):
     """
     Compute the age of each TLE in days relative to the current UTC time.
 
@@ -71,12 +71,19 @@ def compute_tle_age(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def summarize_tle_age(df: pd.DataFrame) -> None:
+def summarize_tle_age(df):
     """
     Print a readable staleness report to the logger.
 
     In a production system this could write to a monitoring dashboard
     or trigger alerts. For this case, it logs to the console.
+
+    Args:
+        df: DataFrame containing an EPOCH column (datetime64).
+
+    Returns:
+        None. A readout report.
+    
     """
     stale = df[df["is_stale"]]
     fresh = df[~df["is_stale"]]
@@ -100,7 +107,7 @@ def summarize_tle_age(df: pd.DataFrame) -> None:
 
 # 2. Orbital Regime Classification ----------
 
-def classify_orbits(df: pd.DataFrame) -> pd.DataFrame:
+def classify_orbits(df):
     """
     Classify each object by orbit shape and regime.
 
@@ -144,7 +151,7 @@ def classify_orbits(df: pd.DataFrame) -> pd.DataFrame:
 
 # 3. Confunction Screening ----------
 
-def screen_conjunctions(df_states: pd.DataFrame) -> pd.DataFrame:
+def screen_conjunctions(df_states):
     """
     Screen all pairs of satellites for potential conjunctions.
 

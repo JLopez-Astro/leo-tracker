@@ -17,7 +17,7 @@ from sgp4.api import Satrec, jday
 logger = logging.getLogger(__name__)
 
 
-def build_satrec_list(df: pd.DataFrame) -> list[tuple[str, Satrec]]:
+def build_satrec_list(df):
     """
     Parse TLE strings from the DataFrame into SGP4 Satrec objects.
 
@@ -50,9 +50,7 @@ def build_satrec_list(df: pd.DataFrame) -> list[tuple[str, Satrec]]:
     return satellites
 
 
-def propagate_to_time(
-    satellites: list[tuple[str, Satrec]],
-    target_time: datetime ) -> pd.DataFrame:
+def propagate_to_time(satellites, target_time):
     """
     Propagate all satellites to a given time and return their ECI state vectors.
 
@@ -125,7 +123,7 @@ def propagate_to_time(
 
     return df_states
 
-def compute_orbital_radius(df_states: pd.DataFrame) -> pd.DataFrame:
+def compute_orbital_radius(df_states):
     """
     Add an orbital radius column (distance from Earth's center) to the
     state vector DataFrame.
