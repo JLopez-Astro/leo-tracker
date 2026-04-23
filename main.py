@@ -2,27 +2,88 @@
 main.py
 
 Entry point for the LEO tracker pipeline.
-Run this directly to test each building phase.
+Fetches live TLE data, propagates orbits, analyzes catalog health,
+and produces an operational report.
+
+Usage:
+    python main.py
+    python main.py --format html
+    python main.py --format html --limit 200
 """
 
+import argparse
+import logging
 import pandas as pd
 from datetime import datetime, timezone
+
 from src.fetcher import create_session, fetch_tle_dataframe, close_session
 from src.propagator import build_satrec_list, propagate_to_time, compute_orbital_radius
 from src.analyzer import compute_tle_age, summarize_tle_age, classify_orbits, screen_conjunctions
+from src.reporter import generate_report_data, render_html, save_report
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s %(name)s: %(message)s]"
+)
+logger = logging.getLogger(__name__)
+
+def parse_args():
+    """
+    Define and parse command-line arguments.
+
+    argparse is used for building CLIs in Python. Automatically Generates 
+    --help output and validates argument types.
+    """
+    parser = argparse.ArgumentParser(
+        description="LEO Satellite Catalog Health Monitor",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    python main.py                          # Run with defaults (html, 100 objects)
+    python main.py --format html            # Explicit HTML output
+    python main.py --limit 500              # Fetch 500 objects
+    python main.py --no-report              # Print summary only, no file output
+        """
+    )
+
+    parser.add_argument(
+        "--format",
+        choices=["html"],
+        default="html",
+        help="Output report format (default: html)."
+    )
+
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Number of objects to fetch (default: 100)."
+    )
+
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Skip report file generation, print summary to terminal only."
+    )
+
+    return parser.parse_args()
+
 
 def main():
+    args = parse_args()
+    generated_at = datetime.now(timezone.utc)
+
     session = create_session()
 
     try:
         # Phase 2: Fetch ----------
         # Fetch the satellites.
-        df = fetch_tle_dataframe(session)
+        # If --limit was passes on the CLI, it overrides the .env value.
+        from config import FETCH_LIMIT
+        fetch_limit = args.limit if args.limit is not None else FETCH_LIMIT
 
-        ## .head() shows the first 5 rows, a quick way to sanity-check a
-        ## DataFrame without printing thousands of rows to terminal.
-        # print("\nFirst 5 records:")
-        # print(df[["OBJECT_NAME", "EPOCH", "INCLINATION", "PERIOD", "APOAPSIS", "PERIAPSIS"]].head())
+        df = fetch_tle_dataframe(session, limit=fetch_limit)
+
 
         # Phase 3: Propagate ----------
         # Propagate all satellites to right now.
@@ -31,52 +92,30 @@ def main():
         df_states = propagate_to_time(satellites, now)
         df_states = compute_orbital_radius(df_states)
 
-        # print("\nPropagated state vectors (first 5):")
-        # print(df_states.head())
-
-        ## .describe() gives summary statistics for all numeric columns.
-        # print("\nAltitude summary (km):")
-        # print(df_states["altitude_km"].describe())
 
         # Phase 4: Analyze ----------
         # Perform conjunction calculations.
         df = compute_tle_age(df)
         summarize_tle_age(df)
-
         df = classify_orbits(df)
-
         df_conjunctions = screen_conjunctions(df_states)
 
-        if not df_conjunctions.empty:
-            proint("\nConjunction alerts:")
-            print(df_conjunctions)
-        else:
-            print("\nNo conjunction alerts at this time.")
 
-        # # Sanity check - flag anything outside expected LEO altitude range
-        # suspicious = df_states[
-        #     (df_states["altitude_km"] < 130) |
-        #     (df_states["altitude_km"] > 2000)
-        # ]
-        # if not suspicious.empty:
-        #     print(f"\nSuspicious objects outside expected LEO range: {len(suspicious)}")
-        #     print(suspicious[["name", "altitude_km", "error"]])
+        # Phase 5: Report ----------
+        if not args.no_report:
+            report_data = generate_report_data(
+                df_tle=df,
+                df_states=df_states,
+                df_conjunctions=df_conjunctions,
+                generated_at=generated_at,
+                fetch_limit=fetch_limit
+            )
 
-        # # Find the suspicious objects in the original TLE data
-        # suspicious_names = suspicious["name"].tolist()
-        # print(df[df["OBJECT_NAME"].isin(suspicious_names)][
-        #     ["OBJECT_NAME", "INCLINATION", "APOAPSIS", "PERIAPSIS", "PERIOD"]
-        # ])
-
-        # .info() prints column names, data types, and non-null counts.
-        # Ran on DataFrames to understand its structure.
-        # print("\nDataFrame info:")
-        # print(df.info())
-
-        # print("\nNumeric summary:")
-        #print(df.describe())
-        # Describe only true numeric columns, excluding EPOCH
-        # print(df.select_dtypes(include='float64').describe())
+            if args.format == "html":
+                content = render_html(report_data)
+                filepath = save_report(content, fmt="html")
+                print(f"\nReport generated: {filepath}")
+                print("Open it in your browser to view the full report.")
 
     finally:
         # The finally block runs whether or not an exception occurred.

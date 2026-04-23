@@ -39,15 +39,6 @@ LOGIN_URL = f"{BASE_URL}/ajaxauth/login"
 # It requests latest TLE for each object (order by epoch desc, limit 1 per object)
 # filtered to LEO objects (period < 128 minutes) in JSON format.
 # FETCH_LIMIT controls number of objects pulled.
-# 
-TLE_QUERY_URL = (
-    f"{BASE_URL}/basicspacedata/query/class/gp"
-    f"/MEAN_MOTION/>11.25" # >11.25 revs/day = orbital period < ~128 min = LEO
-    f"/DECAY_DATE/null-val" # exclude objects that have already re-entered
-    f"/orderby/NORAD_CAT_ID asc"
-    f"/limit/{FETCH_LIMIT}"
-    f"/format/json"
-)
 
 def create_session():
     """
@@ -98,7 +89,7 @@ def create_session():
     logger.info("Authentication successful.")
     return session
 
-def fetch_tle_dataframe(session):
+def fetch_tle_dataframe(session, limit):
     """
     Fetch TLE data for LEO objects and return as a Pandas DataFrame.
 
@@ -114,12 +105,23 @@ def fetch_tle_dataframe(session):
     Raises:
         RuntimeError: If the data request fails or returns empty data.
     """
-    logger.info(f"Fetching TLE data (limit: {FETCH_LIMIT} objects)...")
+    actual_limit = limit if limit is not None else FETCH_LIMIT
+
+    TLE_QUERY_URL = (
+        f"{BASE_URL}/basicspacedata/query/class/gp"
+        f"/MEAN_MOTION/>11.25" # >11.25 revs/day = orbital period < ~128 min = LEO
+        f"/DECAY_DATE/null-val" # exclude objects that have already re-entered
+        f"/orderby/NORAD_CAT_ID asc"
+        f"/limit/{actual_limit}"
+        f"/format/json"
+    )
+
+    logger.info(f"Fetching TLE data (limit: {actual_limit} objects)...")
 
     try:
         response = session.get(TLE_QUERY_URL, timeout=60)
     except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Network error fetching TLE data: {e}") from each
+        raise RuntimeError(f"Network error fetching TLE data: {e}") from e
 
     response.raise_for_status()
 
