@@ -61,7 +61,7 @@ def generate_report_data(df_tle, df_states, df_conjunctions, generated_at, fetch
         dict containing all report sections as structured data.
     """
     stale = df_tle[df_tle["is_stale"]]
-    fresh = df_tle[df_tle["is_stale"]]
+    fresh = df_tle[~df_tle["is_stale"]]
     valid_states = df_states[~df_states["error"]]
 
     # Top 5 stalest objects for the health section
