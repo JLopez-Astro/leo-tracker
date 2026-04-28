@@ -196,7 +196,7 @@ def screen_conjunctions(df_states):
             # Slightly faster than (delta**2).sum()
 
             if distance < CONJUNCTION_THRESHOLD_KM:
-                conjunction.append({
+                conjunctions.append({
                     "object_a": names[i],
                     "object_b": names[j],
                     "distance_km": round(distance, 3)
