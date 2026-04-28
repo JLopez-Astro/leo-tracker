@@ -86,7 +86,7 @@ if [[ ! "$*" =~ "--no-report" ]]; then
 			# Convert Linux path to Windows UNC path that explorer.exe understands.
 			# wslpath -w coverts /home/name/... to \\wsl$\Ubuntu\home\name\...
 			WIN_PATH=$(wslpath -w "$LATEST_REPORT")
-			explorer.exe "$WIN_PATH"
+			explorer.exe "$WIN_PATH" || true # if command fails, continue anyways
 		elif [[ "$OSTYPE" == "darwin"* ]]; then
 			# macOS - 'open' is native command
 			open "$LATEST_REPORT"
