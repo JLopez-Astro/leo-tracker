@@ -31,23 +31,21 @@ astrodynamics engineering roles.
 ## Architecture
 ```
 leo-tracker/
-|- src/
-|	|- fetcher.py		# Space-Track API authentication and TLE ingestion.
-|	|- propagator.py		# SGP4 orbit propagation and Earth-centered inertial (ECI) state vector 
-|	|- analyzer.py		# TLE age analysis, orbit classification, conjunction
-|	|- reporter.py		# Report data assembly and Jinja2 HTML rendering
-|
-|- templates/
-|	|- report.html		# Jinja2 HTML template for the operational report
-|
-|- scripts/
-|	|- setup_env.sh		# Environment setup: venv creation, dependency install, .env loading
-|	|- run_pipeline.sh	# End-to-end pipeline runner (cross-platform)
-| - data/			# Local data cache (git-ignored)
-| - reports/			# Generated HTML reports (git-ignored)
-| - docs/			# Project documentation and assets
-| - main.py			# CLI entry point with argparse
-| - config.py			# Environment variable loading via python-dotenv
+├── src/
+│   ├── fetcher.py		# Space-Track API authentication and TLE ingestion
+│   ├── propagator.py		# SGP4 orbit propagation and Earth-centered inertial (ECI) state vector computation
+│   ├── analyzer.py		# TLE age analysis, orbit classification, conjunction screening
+│   └── reporter.py		# Report data assembly and Jinja2 HTML rendering
+├── templates/
+│   └── reporter.html		# Report data assembly and Jinja2 HTML rendering
+├── scripts/
+│   ├── setup_env.sh		# Environment setup: venv creation, dependency install, .env loading
+│   └── run_pipeline.sh		End-to-end pipeline runner (cross-platform)
+├── data/		# Local data cache (git-ignored)
+├── reports/		# Jinja2 HTML template for the operational report
+├── docs/ 		# Project documentation and assets
+├── main.py 		# CLI entry point with argparse
+└── config.py		# Environment variable loading via python-dotenv
 ```
 
 Each `src/` module has a single responsibility. `fetcher.py` fetches, `propagator.py`
@@ -58,14 +56,16 @@ Pandas DataFrames.
 
 ## Tech Stack
 
-Language: Python 3.11
-Data pipeline: Pandas, NumPy
-Orbit propagation: python-sgp4 (SGP4/SDP4 model)
-API integration: Requests (authenticated REST session)
-Templating: Jinja2
-Environment management: python-dotenv, venv
-Automation: Bash (setup and pipeline scripts)
-Verion Control: Git
+| Layer | Tools |
+| --- | --- |
+| Language | Python 3.11 |
+| Data pipeline | Pandas, NumPy |
+| Orbit propagation | python-sgp4 (SGP4/SDP4 model) |
+| API integration | Requests (authenticated REST session) |
+| Templating | Jinja2 |
+| Environment management | python-dotenv, venv |
+| Automation | Bash (setup and pipeline scripts) |
+| Verion Control | Git |
 
 ---
 
@@ -98,12 +98,61 @@ source scripts/setup_env.sh
  SPACETRACK_PASSWORD=your_password
  FETCH_LIMIT=100
 ```
+## Usage
+
+### Run the full pipeline
+
+```bash
+# Default run - fetches 100 objects, generates HTML report
+source scripts/run_pipeline.sh
+
+# Fetch 500 objects
+source scripts/run_pipeline.sh --limit 500
+
+# Run without generating a report file
+source scripts/run_pipeline.sh --no-report
+```
+
+### run main.py directly
+```bash
+# Activate the virtual environment first
+source venv/bin/activate
+
+python main.py --format html --limit 200
+```
 
 ### CLI flags
-`--format`	Output format (`html`), Default: `html`
-`--limit`	Number of objects to fetch, Default: Value in `.env` 
-`--no-report`	Skip report file generation, Default: Off
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--format` |	Output format (`html`) | `html` |
+| `--limit` |	Number of objects to fetch | Value in `.env` | 
+| `--no-report` |	Skip report file generation | Off |
 
+---
+
+## Key Concepts
+
+### Two-Line Elements (TLEs)
+TLEs are a standardized format encoding a satellite's mean orbital elements ata specific epoch. They describe the
+shape, orientation, and timing of an orbit - not positoin directly. SGP4 uses these elements to propagate the
+satellite's state forward in time.
+
+### SGP4 Propagation
+The SGP4 (Simplified General Perturbations 4) model accounts for the major forces perturbing real LEO orbits - Earth's oblateness (J2), atmospheric drag, and solar radiation pressure - using analytical approximations fast
+enough for catalog-scale computation. Positional accuracy degrades with TLE age, making epoch freshness a key
+catalog health metric.
+
+### Conjunction Screening
+Pairwise Euclidean distance between ECI positoin vectors is computed for all object pairs. Pairs whose separation
+falls below the threshold (default 50 km) are flagged as potential conjunctions. With N objects this is an
+O(N²) operation - production systems use spatial indexing to scale this to catalogs of 25,000+ objects.
+
+### ECI Coordinate Frame
+Earth-Centered Inertial (ECI) is a non-rotating reference frame fixed relative to the stars. Newton's laws of
+motion hold directly in this frame, making it natural for orbital mechanics. Converstion to Earth-fixed coordinates (ECEF / latitude-longitude-altitude) requires a rotation by Earth's sidereal angle at the time of
+interest.
+
+---
 
 ## Limitations & Future Work
 
@@ -119,6 +168,10 @@ function and template.
 statistical orbit determination rather than open-loop propagation.
 
 ---
+
+## Background
+
+This project was built to bridge a background in observational astrophysics data analysis and telescope operations into the space domain awareness and satellite operations industry. The statistical methods used here - uncertainty propagation, epoch-based data quality assessment, and SNR-informed flagging - are directly analagous to techniques applied in transit photometry and light curve analysis for space-based observations (e.g. CHEOPS).
 
 ## Data Source
 
